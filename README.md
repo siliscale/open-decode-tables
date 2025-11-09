@@ -168,19 +168,3 @@ The generator performs automatic validation:
 
 This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
 
-## Contributing
-
-Contributions are welcome! When adding new instructions or modifying decode tables:
-1. Update the YAML table file
-2. Regenerate the SystemVerilog code
-3. Verify the generated code matches expectations
-4. Test with your target instruction set architecture
-
-## Future Work
-
-- [ ] Implement espresso backend for optimized logic synthesis
-- [ ] Support for additional instruction set architectures
-- [ ] Enhanced pattern matching capabilities
-- [ ] Verification test generation
-- [ ] Documentation generation from YAML tables
-
