@@ -1,0 +1,414 @@
+module_name: ebpf_decoder
+input: 64
+output:
+  - type_name: "decode_out_t"
+  - fields:
+      [
+        "alu",
+        "rs1",
+        "rs2",
+        "imm",
+        "rd",
+        "pc",
+        "load",
+        "store",
+        "lsu",
+        "add",
+        "sub",
+        "land",
+        "lor",
+        "lxor",
+        "sll",
+        "sra",
+        "srl",
+        "slt",
+        "unsign",
+        "condbr",
+        "beq",
+        "bne",
+        "bge",
+        "blt",
+        "bgt",
+        "jal",
+        "by",
+        "half",
+        "word",
+        "mul",
+        "rs1_sign",
+        "rs2_sign",
+        "low",
+        "div",
+        "rem",
+        "nop",
+        "legal",
+        "offset",
+        "atomic",
+        "call",
+        "exit",
+        "mov",
+        "neg",
+        "end",
+        "mul64",
+        "div64",
+        "mod",
+        "arsh",
+        "jsle",
+        "jslt",
+        "jsge",
+        "jsgt",
+        "jset"
+      ]
+decodes:
+  # NOP instruction
+  - instr: "nop"
+    match: "0000000000000000000000000000000000000000000000000000000000000000"
+    decodes: ["nop", "legal"]
+  
+  # Exit instruction
+  - instr: "exit"
+    match: "1001011100000000000000000000000000000000000000000000000000000000"
+    decodes: ["exit", "legal"]
+  
+  # Arithmetic Instructions (64-bit, immediate)
+  - instr: "dst += imm"
+    match: "................................0000000000000000....000000000111"
+    decodes: ["alu", "add", "rs1", "imm", "rd", "legal"]
+  - instr: "dst -= imm"
+    match: "................................0000000000000000....000000010111"
+    decodes: ["alu", "sub", "rs1", "imm", "rd", "legal"]
+  - instr: "dst *= imm"
+    match: "................................0000000000000000....000000100111"
+    decodes: ["alu", "mul", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (imm != 0) ? (dst / imm) : 0"
+    match: "................................0000000000000000....000000110111"
+    decodes: ["alu", "divu", "rs1", "imm", "rd", "legal"]
+  - instr: "dst |= imm"
+    match: "................................0000000000000000....000001000111"
+    decodes: ["alu", "lor", "rs1", "imm", "rd", "legal"]
+  - instr: "dst &= imm"
+    match: "................................0000000000000000....000001010111"
+    decodes: ["alu", "land", "rs1", "imm", "rd", "legal"]
+  - instr: "dst <<= imm"
+    match: "................................0000000000000000....000001100111"
+    decodes: ["alu", "sll", "rs1", "imm", "rd", "legal"]
+  - instr: "dst >>= imm (logical)"
+    match: "................................0000000000000000....000001110111"
+    decodes: ["alu", "srl", "rs1", "imm", "rd", "legal"]
+  - instr: "dst >>= imm (arithmetic)"
+    match: "................................0000000000000000....000011000111"
+    decodes: ["alu", "sra", "rs1", "imm", "rd", "legal"]
+  - instr: "dst ^= imm"
+    match: "................................0000000000000000....000010100111"
+    decodes: ["alu", "lxor", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (imm != 0) ? (dst % imm) : dst"
+    match: "................................0000000000000000....000010100111"
+    decodes: ["alu", "remu", "rs1", "imm", "rd", "legal"]
+  
+  # Arithmetic Instructions (64-bit, register)
+  - instr: "dst += src"
+    match: "................0000000000000000................11110000"
+    decodes: ["alu", "add", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst -= src"
+    match: "................0000000000000000................00001000"
+    decodes: ["alu", "sub", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst *= src"
+    match: "................0000000000000000................10001000"
+    decodes: ["alu", "mul", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst /= src"
+    match: "................0000000000000000................01001000"
+    decodes: ["alu", "div", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst |= src"
+    match: "................0000000000000000................11001000"
+    decodes: ["alu", "lor", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst &= src"
+    match: "................0000000000000000................00101000"
+    decodes: ["alu", "land", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst <<= src"
+    match: "................0000000000000000................10101000"
+    decodes: ["alu", "sll", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst >>= src (logical)"
+    match: "................0000000000000000................01101000"
+    decodes: ["alu", "srl", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst >>= src (arithmetic)"
+    match: "................0000000000000000................11101000"
+    decodes: ["alu", "sra", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst ^= src"
+    match: "................0000000000000000................00011000"
+    decodes: ["alu", "lxor", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst %= src"
+    match: "................0000000000000000................10011000"
+    decodes: ["alu", "mod", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = -dst"
+    match: "................0000000000000000................01011000"
+    decodes: ["alu", "neg", "rs1", "rd", "legal"]
+  - instr: "dst = src"
+    match: "................0000000000000000................11011000"
+    decodes: ["alu", "mov", "rs1", "rd", "legal"]
+  
+  # Arithmetic Instructions (32-bit, immediate)
+  - instr: "dst = (u32)((u32)dst + (u32)imm)"
+    match: "................0000000000000000................00111000"
+    decodes: ["alu", "add", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst - (u32)imm)"
+    match: "................0000000000000000................10111000"
+    decodes: ["alu", "sub", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst * (u32)imm)"
+    match: "................0000000000000000................01111000"
+    decodes: ["alu", "mul", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst / (u32)imm)"
+    match: "................0000000000000000................11111000"
+    decodes: ["alu", "div", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst | (u32)imm)"
+    match: "................0000000000000000................00000100"
+    decodes: ["alu", "lor", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst & (u32)imm)"
+    match: "................0000000000000000................10000100"
+    decodes: ["alu", "land", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst << (u32)imm)"
+    match: "................0000000000000000................01000100"
+    decodes: ["alu", "sll", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst >> (u32)imm) (logical)"
+    match: "................0000000000000000................11000100"
+    decodes: ["alu", "srl", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst >> (u32)imm) (arithmetic)"
+    match: "................0000000000000000................00100100"
+    decodes: ["alu", "sra", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst ^ (u32)imm)"
+    match: "................0000000000000000................10100100"
+    decodes: ["alu", "lxor", "half", "rs1", "imm", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst % (u32)imm)"
+    match: "................0000000000000000................01100100"
+    decodes: ["alu", "mod", "half", "rs1", "imm", "rd", "legal"]
+  
+  # Arithmetic Instructions (32-bit, register)
+  - instr: "dst = (u32)((u32)dst + (u32)src)"
+    match: "................0000000000000000................11100100"
+    decodes: ["alu", "add", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst - (u32)src)"
+    match: "................0000000000000000................00010100"
+    decodes: ["alu", "sub", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst * (u32)src)"
+    match: "................0000000000000000................10010100"
+    decodes: ["alu", "mul", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst / (u32)src)"
+    match: "................0000000000000000................01010100"
+    decodes: ["alu", "div", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst | (u32)src)"
+    match: "................0000000000000000................11010100"
+    decodes: ["alu", "lor", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst & (u32)src)"
+    match: "................0000000000000000................00110100"
+    decodes: ["alu", "land", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst << (u32)src)"
+    match: "................0000000000000000................10110100"
+    decodes: ["alu", "sll", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst >> (u32)src) (logical)"
+    match: "................0000000000000000................01110100"
+    decodes: ["alu", "srl", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst >> (u32)src) (arithmetic)"
+    match: "................0000000000000000................11110100"
+    decodes: ["alu", "sra", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst ^ (u32)src)"
+    match: "................0000000000000000................00001100"
+    decodes: ["alu", "lxor", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)((u32)dst % (u32)src)"
+    match: "................0000000000000000................10001100"
+    decodes: ["alu", "mod", "half", "rs1", "rs2", "rd", "legal"]
+  - instr: "dst = (u32)-(u32)dst"
+    match: "................0000000000000000................01001100"
+    decodes: ["alu", "neg", "half", "rs1", "rd", "legal"]
+  - instr: "dst = (u32)src"
+    match: "................0000000000000000................11001100"
+    decodes: ["alu", "mov", "half", "rs1", "rd", "legal"]
+  
+  # Jump Instructions (unconditional)
+  - instr: "goto +offset"
+    match: "................0000000000000000................10101000"
+    decodes: ["jal", "pc", "offset", "legal"]
+  - instr: "goto -offset"
+    match: "................1111111111111111................10101000"
+    decodes: ["jal", "pc", "offset", "legal"]
+  - instr: "call helper"
+    match: "................0000000000000000................00101001"
+    decodes: ["call", "imm", "legal"]
+  - instr: "call function"
+    match: "................0000000000000000................10101001"
+    decodes: ["call", "imm", "legal"]
+  
+  # Jump Instructions (conditional, 64-bit)
+  - instr: "if dst == src goto +offset"
+    match: "................0000000000000000................01101000"
+    decodes: ["condbr", "beq", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if dst > src goto +offset"
+    match: "................0000000000000000................11101000"
+    decodes: ["condbr", "bgt", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if dst >= src goto +offset"
+    match: "................0000000000000000................00011000"
+    decodes: ["condbr", "bge", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if dst & src goto +offset"
+    match: "................0000000000000000................10011000"
+    decodes: ["condbr", "jset", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if dst != src goto +offset"
+    match: "................0000000000000000................01011000"
+    decodes: ["condbr", "bne", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if dst > src (signed) goto +offset"
+    match: "................0000000000000000................11011000"
+    decodes: ["condbr", "jsgt", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if dst >= src (signed) goto +offset"
+    match: "................0000000000000000................00111000"
+    decodes: ["condbr", "jsge", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if dst < src (signed) goto +offset"
+    match: "................0000000000000000................10111000"
+    decodes: ["condbr", "jslt", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if dst <= src (signed) goto +offset"
+    match: "................0000000000000000................01111000"
+    decodes: ["condbr", "jsle", "rs1", "rs2", "pc", "offset", "legal"]
+  
+  # Jump Instructions (conditional, 32-bit)
+  - instr: "if (u32)dst == (u32)src goto +offset"
+    match: "................0000000000000000................11111000"
+    decodes: ["condbr", "beq", "half", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if (u32)dst > (u32)src goto +offset"
+    match: "................0000000000000000................00000100"
+    decodes: ["condbr", "bgt", "half", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if (u32)dst >= (u32)src goto +offset"
+    match: "................0000000000000000................10000100"
+    decodes: ["condbr", "bge", "half", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if (u32)dst & (u32)src goto +offset"
+    match: "................0000000000000000................01000100"
+    decodes: ["condbr", "jset", "half", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if (u32)dst != (u32)src goto +offset"
+    match: "................0000000000000000................11000100"
+    decodes: ["condbr", "bne", "half", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if (s32)dst > (s32)src goto +offset"
+    match: "................0000000000000000................00100100"
+    decodes: ["condbr", "jsgt", "half", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if (s32)dst >= (s32)src goto +offset"
+    match: "................0000000000000000................10100100"
+    decodes: ["condbr", "jsge", "half", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if (s32)dst < (s32)src goto +offset"
+    match: "................0000000000000000................01100100"
+    decodes: ["condbr", "jslt", "half", "rs1", "rs2", "pc", "offset", "legal"]
+  - instr: "if (s32)dst <= (s32)src goto +offset"
+    match: "................0000000000000000................11100100"
+    decodes: ["condbr", "jsle", "half", "rs1", "rs2", "pc", "offset", "legal"]
+  
+  # Jump Instructions (conditional, immediate)
+  - instr: "if dst == imm goto +offset"
+    match: "................0000000000000000................01101000"
+    decodes: ["condbr", "beq", "rs1", "imm", "pc", "offset", "legal"]
+  - instr: "if dst > imm goto +offset"
+    match: "................0000000000000000................11101000"
+    decodes: ["condbr", "bgt", "rs1", "imm", "pc", "offset", "legal"]
+  - instr: "if dst >= imm goto +offset"
+    match: "................0000000000000000................00011000"
+    decodes: ["condbr", "bge", "rs1", "imm", "pc", "offset", "legal"]
+  - instr: "if dst & imm goto +offset"
+    match: "................0000000000000000................10011000"
+    decodes: ["condbr", "jset", "rs1", "imm", "pc", "offset", "legal"]
+  - instr: "if dst != imm goto +offset"
+    match: "................0000000000000000................01011000"
+    decodes: ["condbr", "bne", "rs1", "imm", "pc", "offset", "legal"]
+  - instr: "if dst > imm (signed) goto +offset"
+    match: "................0000000000000000................11011000"
+    decodes: ["condbr", "jsgt", "rs1", "imm", "pc", "offset", "legal"]
+  - instr: "if dst >= imm (signed) goto +offset"
+    match: "................0000000000000000................00111000"
+    decodes: ["condbr", "jsge", "rs1", "imm", "pc", "offset", "legal"]
+  - instr: "if dst < imm (signed) goto +offset"
+    match: "................0000000000000000................10111000"
+    decodes: ["condbr", "jslt", "rs1", "imm", "pc", "offset", "legal"]
+  - instr: "if dst <= imm (signed) goto +offset"
+    match: "................0000000000000000................01111000"
+    decodes: ["condbr", "jsle", "rs1", "imm", "pc", "offset", "legal"]
+  
+  # Load Instructions
+  - instr: "dst = *(u8 *)(src + offset)"
+    match: "................0000000000000000................10000110"
+    decodes: ["lsu", "load", "rs1", "rd", "by", "offset", "legal"]
+  - instr: "dst = *(u16 *)(src + offset)"
+    match: "................0000000000000000................01000110"
+    decodes: ["lsu", "load", "rs1", "rd", "half", "offset", "legal"]
+  - instr: "dst = *(u32 *)(src + offset)"
+    match: "................0000000000000000................11000110"
+    decodes: ["lsu", "load", "rs1", "rd", "word", "offset", "legal"]
+  - instr: "dst = *(u64 *)(src + offset)"
+    match: "................0000000000000000................10100110"
+    decodes: ["lsu", "load", "rs1", "rd", "offset", "legal"]
+  
+  # Store Instructions
+  - instr: "*(u8 *)(dst + offset) = src"
+    match: "................0000000000000000................01000110"
+    decodes: ["lsu", "store", "rs1", "rs2", "by", "offset", "legal"]
+  - instr: "*(u16 *)(dst + offset) = src"
+    match: "................0000000000000000................11000110"
+    decodes: ["lsu", "store", "rs1", "rs2", "half", "offset", "legal"]
+  - instr: "*(u32 *)(dst + offset) = src"
+    match: "................0000000000000000................00100110"
+    decodes: ["lsu", "store", "rs1", "rs2", "word", "offset", "legal"]
+  - instr: "*(u64 *)(dst + offset) = src"
+    match: "................0000000000000000................10100110"
+    decodes: ["lsu", "store", "rs1", "rs2", "offset", "legal"]
+  
+  # 64-bit Immediate Instructions
+  - instr: "dst = imm64"
+    match: "................0000000000000000................00011000"
+    decodes: ["mov", "imm", "rd", "legal"]
+  
+  # Byte Swap Instructions
+  - instr: "dst = be16(dst)"
+    match: "................0000000000001000................00111011"
+    decodes: ["end", "half", "rs1", "rd", "legal"]
+  - instr: "dst = be32(dst)"
+    match: "................0000000000000100................00111011"
+    decodes: ["end", "word", "rs1", "rd", "legal"]
+  - instr: "dst = be64(dst)"
+    match: "................0000000000000010................00111011"
+    decodes: ["end", "rs1", "rd", "legal"]
+  - instr: "dst = le16(dst)"
+    match: "................0000000000001000................00101011"
+    decodes: ["end", "half", "rs1", "rd", "legal"]
+  - instr: "dst = le32(dst)"
+    match: "................0000000000000100................00101011"
+    decodes: ["end", "word", "rs1", "rd", "legal"]
+  - instr: "dst = le64(dst)"
+    match: "................0000000000000010................00101011"
+    decodes: ["end", "rs1", "rd", "legal"]
+  
+  # Atomic Operations
+  - instr: "lock *(u32 *)(dst + offset) += src"
+    match: "................0000000000000000................11000011"
+    decodes: ["atomic", "add", "rs1", "rs2", "word", "offset", "legal"]
+  - instr: "lock *(u64 *)(dst + offset) += src"
+    match: "................0000000010000000................11000011"
+    decodes: ["atomic", "add", "rs1", "rs2", "offset", "legal"]
+  - instr: "lock *(u32 *)(dst + offset) |= src"
+    match: "................0000000000000010................11000011"
+    decodes: ["atomic", "lor", "rs1", "rs2", "word", "offset", "legal"]
+  - instr: "lock *(u64 *)(dst + offset) |= src"
+    match: "................0000000010000010................11000011"
+    decodes: ["atomic", "lor", "rs1", "rs2", "offset", "legal"]
+  - instr: "lock *(u32 *)(dst + offset) &= src"
+    match: "................0000000000001010................11000011"
+    decodes: ["atomic", "land", "rs1", "rs2", "word", "offset", "legal"]
+  - instr: "lock *(u64 *)(dst + offset) &= src"
+    match: "................0000000010001010................11000011"
+    decodes: ["atomic", "land", "rs1", "rs2", "offset", "legal"]
+  - instr: "lock *(u32 *)(dst + offset) ^= src"
+    match: "................0000000000000101................11000011"
+    decodes: ["atomic", "lxor", "rs1", "rs2", "word", "offset", "legal"]
+  - instr: "lock *(u64 *)(dst + offset) ^= src"
+    match: "................0000000010000101................11000011"
+    decodes: ["atomic", "lxor", "rs1", "rs2", "offset", "legal"]
+  - instr: "lock xchg *(u32 *)(dst + offset), src"
+    match: "................0000000010000111................11000011"
+    decodes: ["atomic", "mov", "rs1", "rs2", "word", "offset", "legal"]
+  - instr: "lock xchg *(u64 *)(dst + offset), src"
+    match: "................0000000010000111................11000011"
+    decodes: ["atomic", "mov", "rs1", "rs2", "offset", "legal"]
+  - instr: "lock cmpxchg *(u32 *)(dst + offset), src"
+    match: "................0000000010001111................11000011"
+    decodes: ["atomic", "beq", "rs1", "rs2", "word", "offset", "legal"]
+  - instr: "lock cmpxchg *(u64 *)(dst + offset), src"
+    match: "................0000000010001111................11000011"
+    decodes: ["atomic", "beq", "rs1", "rs2", "offset", "legal"]
